@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Bell,
@@ -15,9 +15,38 @@ const HRHeader = ({ onMenuToggle }) => {
   const { user, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const profileButtonRef = useRef(null);
+  const notificationButtonRef = useRef(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
   const handleLogout = () => {
     logout();
+  };
+
+  const updateDropdownPosition = (buttonRef) => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 12, // 12px margin from button
+        right: window.innerWidth - rect.right
+      });
+    }
+  };
+
+  const handleProfileToggle = () => {
+    if (!isProfileOpen) {
+      updateDropdownPosition(profileButtonRef);
+    }
+    setIsProfileOpen(!isProfileOpen);
+    setIsNotificationOpen(false);
+  };
+
+  const handleNotificationToggle = () => {
+    if (!isNotificationOpen) {
+      updateDropdownPosition(notificationButtonRef);
+    }
+    setIsNotificationOpen(!isNotificationOpen);
+    setIsProfileOpen(false);
   };
 
   const notifications = [
@@ -29,7 +58,7 @@ const HRHeader = ({ onMenuToggle }) => {
   const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
-    <header className="bg-gradient-to-r from-white via-blue-50 to-indigo-50 border-b border-blue-100 shadow-sm backdrop-blur-sm px-6 py-4">
+    <header className="relative bg-gradient-to-r from-white via-blue-50 to-indigo-50 border-b border-blue-100 shadow-sm backdrop-blur-sm px-6 py-4 z-50">
       <div className="flex items-center justify-between">
         {/* Left side */}
         <div className="flex items-center gap-6">
@@ -88,7 +117,8 @@ const HRHeader = ({ onMenuToggle }) => {
           {/* Notifications */}
           <div className="relative">
             <button
-              onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+              ref={notificationButtonRef}
+              onClick={handleNotificationToggle}
               className="relative p-3 rounded-xl bg-white/50 backdrop-blur-sm border border-blue-200 text-blue-600 hover:bg-blue-50 hover:scale-105 transition-all duration-200 shadow-sm"
             >
               <Bell className="w-5 h-5" />
@@ -101,7 +131,13 @@ const HRHeader = ({ onMenuToggle }) => {
 
             {/* Notifications dropdown */}
             {isNotificationOpen && (
-              <div className="absolute right-0 mt-3 w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-blue-100 z-50 animate-in slide-in-from-top-2 duration-200">
+              <div
+                className="fixed w-80 bg-white backdrop-blur-md rounded-2xl shadow-2xl border border-blue-100 z-[9999] animate-in slide-in-from-top-2 duration-200"
+                style={{
+                  top: `${dropdownPosition.top}px`,
+                  right: `${dropdownPosition.right}px`
+                }}
+              >
                 <div className="p-5 border-b border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
                   <h3 className="font-bold text-gray-900 text-lg">Notifications</h3>
                   {unreadCount > 0 && (
@@ -138,7 +174,8 @@ const HRHeader = ({ onMenuToggle }) => {
           {/* Profile dropdown */}
           <div className="relative">
             <button
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              ref={profileButtonRef}
+              onClick={handleProfileToggle}
               className="flex items-center gap-3 p-2 rounded-xl bg-white/50 backdrop-blur-sm border border-blue-200 hover:bg-blue-50 hover:scale-105 transition-all duration-200 shadow-sm"
             >
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -153,7 +190,13 @@ const HRHeader = ({ onMenuToggle }) => {
 
             {/* Profile dropdown */}
             {isProfileOpen && (
-              <div className="absolute right-0 mt-3 w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-blue-100 z-50 animate-in slide-in-from-top-2 duration-200">
+              <div
+                className="fixed w-64 bg-white backdrop-blur-md rounded-2xl shadow-2xl border border-blue-100 z-[9999] animate-in slide-in-from-top-2 duration-200"
+                style={{
+                  top: `${dropdownPosition.top}px`,
+                  right: `${dropdownPosition.right}px`
+                }}
+              >
                 <div className="p-5 border-b border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -193,7 +236,7 @@ const HRHeader = ({ onMenuToggle }) => {
       {/* Overlay for dropdowns */}
       {(isProfileOpen || isNotificationOpen) && (
         <div
-          className="fixed inset-0 bg-black/10 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/10 backdrop-blur-sm z-[9998] animate-in fade-in duration-200"
           onClick={() => {
             setIsProfileOpen(false);
             setIsNotificationOpen(false);

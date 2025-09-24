@@ -145,6 +145,60 @@ const MyLeave = () => {
 
   const { showToast } = useToast() || {};
 
+  // Get all blocked dates (dates with existing leaves)
+  const getBlockedDates = () => {
+    const blockedDates = [];
+
+    leaves.forEach(leave => {
+      // Skip rejected or cancelled leaves
+      if (leave.status === 'rejected' || leave.status === 'cancelled') {
+        return;
+      }
+
+      // When editing, skip the current leave being edited
+      if (editingLeave && leave._id === editingLeave._id) {
+        return;
+      }
+
+      const startDate = new Date(leave.startDate);
+      const endDate = new Date(leave.endDate);
+
+      // Add all dates between start and end (inclusive)
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        blockedDates.push(d.toISOString().split('T')[0]);
+      }
+    });
+
+    return blockedDates;
+  };
+
+  // Check if a specific date is blocked
+  const isDateBlocked = (dateString) => {
+    if (!dateString) return false;
+    const blockedDates = getBlockedDates();
+    return blockedDates.includes(dateString);
+  };
+
+  // Validate date selection
+  const handleDateChange = (field, value) => {
+    if (isDateBlocked(value)) {
+      if (showToast) {
+        showToast('This date already has a leave application. Please select a different date.', 'error');
+      }
+      return; // Don't update if date is blocked
+    }
+
+    if (field === 'startDate') {
+      setFormData({
+        ...formData,
+        startDate: value,
+        endDate: formData.isHalfDay ? value : (value > formData.endDate ? value : formData.endDate)
+      });
+    } else {
+      setFormData({ ...formData, endDate: value });
+    }
+  };
+
   const leaveTypes = [
     { value: 'sick', label: 'Sick Leave', icon: '🏥', color: 'from-red-400 to-rose-600', bgColor: 'bg-red-50', textColor: 'text-red-800' },
     { value: 'annual', label: 'Annual Leave', icon: '🏖️', color: 'from-blue-400 to-indigo-600', bgColor: 'bg-blue-50', textColor: 'text-blue-800' },
@@ -238,6 +292,33 @@ const MyLeave = () => {
     setSubmitting(true);
 
     try {
+      // Check for date conflicts with existing leaves (only for new applications)
+      if (!editingLeave) {
+        const startDate = new Date(formData.startDate);
+        const endDate = new Date(formData.endDate);
+
+        const hasConflict = leaves.some(leave => {
+          // Skip rejected or cancelled leaves
+          if (leave.status === 'rejected' || leave.status === 'cancelled') {
+            return false;
+          }
+
+          const leaveStart = new Date(leave.startDate);
+          const leaveEnd = new Date(leave.endDate);
+
+          // Check if dates overlap
+          return (startDate <= leaveEnd && endDate >= leaveStart);
+        });
+
+        if (hasConflict) {
+          if (showToast) {
+            showToast('You already have a leave application for the selected date range. Please choose different dates.', 'error');
+          }
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const submitData = {
         ...formData,
         startDate: new Date(formData.startDate).toISOString(),
@@ -786,27 +867,89 @@ const MyLeave = () => {
                 {/* Date Range */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      From Date
+                      {getBlockedDates().length > 0 && (
+                        <span className="text-xs text-red-500 ml-2">
+                          (Some dates unavailable due to existing leaves)
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="date"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-colors ${
+                        isDateBlocked(formData.startDate)
+                          ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
                       value={formData.startDate}
-                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value, endDate: formData.isHalfDay ? e.target.value : formData.endDate })}
+                      onChange={(e) => handleDateChange('startDate', e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
                       required
                     />
+                    {isDateBlocked(formData.startDate) && (
+                      <p className="text-xs text-red-500 mt-1">
+                        This date has an existing leave application
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      To Date
+                      {getBlockedDates().length > 0 && (
+                        <span className="text-xs text-red-500 ml-2">
+                          (Some dates unavailable due to existing leaves)
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="date"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-colors ${
+                        isDateBlocked(formData.endDate)
+                          ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
                       value={formData.endDate}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      onChange={(e) => handleDateChange('endDate', e.target.value)}
+                      min={formData.startDate || new Date().toISOString().split('T')[0]}
                       required
                       disabled={formData.isHalfDay}
                     />
+                    {isDateBlocked(formData.endDate) && (
+                      <p className="text-xs text-red-500 mt-1">
+                        This date has an existing leave application
+                      </p>
+                    )}
                   </div>
                 </div>
+
+                {/* Show blocked dates information */}
+                {getBlockedDates().length > 0 && (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                    <div className="flex items-center mb-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 mr-2" />
+                      <h4 className="text-sm font-medium text-yellow-800">Unavailable Dates</h4>
+                    </div>
+                    <p className="text-sm text-yellow-700 mb-2">
+                      The following dates already have leave applications:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {getBlockedDates().slice(0, 10).map((date, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-md text-xs"
+                        >
+                          {new Date(date + 'T00:00:00').toLocaleDateString()}
+                        </span>
+                      ))}
+                      {getBlockedDates().length > 10 && (
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-md text-xs">
+                          +{getBlockedDates().length - 10} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Reason */}
                 <div>

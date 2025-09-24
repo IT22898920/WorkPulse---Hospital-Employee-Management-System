@@ -49,6 +49,20 @@ const AddEmployee = () => {
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
 
+  // Calculate max date (18 years ago from today)
+  const getMaxBirthDate = () => {
+    const today = new Date();
+    const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+    return maxDate.toISOString().split('T')[0];
+  };
+
+  // Calculate min date (65 years ago from today)
+  const getMinBirthDate = () => {
+    const today = new Date();
+    const minDate = new Date(today.getFullYear() - 65, today.getMonth(), today.getDate());
+    return minDate.toISOString().split('T')[0];
+  };
+
   const departments = [
     'Emergency', 'Cardiology', 'Pediatrics', 'Orthopedics',
     'Neurology', 'Radiology', 'Laboratory', 'Administration', 'IT', 'HR',
@@ -122,15 +136,19 @@ const AddEmployee = () => {
       newErrors.email = 'Invalid email format';
     }
 
-    // Phone validation - only digits, +, and basic formatting
-    const phoneRegex = /^[\+]?[0-9]+$/;
-    if (formData.phoneNumber && !phoneRegex.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = 'Phone number can only contain digits and + symbol';
+    // Phone validation - exactly 10 digits only
+    const phoneRegex = /^[0-9]{10}$/;
+    if (formData.phoneNumber) {
+      if (!phoneRegex.test(formData.phoneNumber)) {
+        newErrors.phoneNumber = 'Phone number must be exactly 10 digits';
+      }
     }
 
-    // Emergency contact phone validation
-    if (formData.emergencyContact.phoneNumber && !phoneRegex.test(formData.emergencyContact.phoneNumber)) {
-      newErrors.emergencyContactPhone = 'Emergency contact phone can only contain digits and + symbol';
+    // Emergency contact phone validation - exactly 10 digits only
+    if (formData.emergencyContact.phoneNumber) {
+      if (!phoneRegex.test(formData.emergencyContact.phoneNumber)) {
+        newErrors.emergencyContactPhone = 'Emergency contact phone must be exactly 10 digits';
+      }
     }
 
     // Emergency contact name validation
@@ -172,11 +190,13 @@ const AddEmployee = () => {
     }
   };
 
-  // Handler for phone fields - only allow digits and +
+  // Handler for phone fields - only allow digits, max 10 digits
   const handlePhoneChange = (e) => {
     const { name, value } = e.target;
-    // Remove any characters that are not digits or +
-    const filteredValue = value.replace(/[^0-9+]/g, '');
+    // Remove any characters that are not digits
+    const filteredValue = value.replace(/[^0-9]/g, '');
+    // Limit to exactly 10 digits
+    const limitedValue = filteredValue.slice(0, 10);
 
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
@@ -184,11 +204,11 @@ const AddEmployee = () => {
         ...prev,
         [parent]: {
           ...prev[parent],
-          [child]: filteredValue
+          [child]: limitedValue
         }
       }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: filteredValue }));
+      setFormData(prev => ({ ...prev, [name]: limitedValue }));
     }
   };
 
@@ -464,10 +484,11 @@ const AddEmployee = () => {
                       name="phoneNumber"
                       value={formData.phoneNumber}
                       onChange={handlePhoneChange}
+                      maxLength="10"
                       className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                         errors.phoneNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
-                      placeholder="+94712345678 (digits only)"
+                      placeholder="0712345678 (10 digits only)"
                     />
                   </div>
                   {errors.phoneNumber && (
@@ -489,11 +510,16 @@ const AddEmployee = () => {
                       name="dateOfBirth"
                       value={formData.dateOfBirth}
                       onChange={handleChange}
+                      min={getMinBirthDate()}
+                      max={getMaxBirthDate()}
                       className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                         errors.dateOfBirth ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                     />
                   </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Must be between 18 and 65 years old
+                  </p>
                   {errors.dateOfBirth && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                       <AlertCircle className="w-4 h-4" />
@@ -671,10 +697,11 @@ const AddEmployee = () => {
                     name="emergencyContact.phoneNumber"
                     value={formData.emergencyContact.phoneNumber}
                     onChange={handlePhoneChange}
+                    maxLength="10"
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                       errors.emergencyContactPhone ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     }`}
-                    placeholder="+94712345678 (digits only)"
+                    placeholder="0712345678 (10 digits only)"
                   />
                   {errors.emergencyContactPhone && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">

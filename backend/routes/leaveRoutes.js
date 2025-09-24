@@ -36,6 +36,7 @@ router.delete('/admin/policies/:id', protect, authorize('admin'), deleteLeavePol
 router.post('/', protect, applyLeave);
 router.get('/my-leaves', protect, getMyLeaves);
 router.get('/balance', protect, getLeaveBalance);
+router.get('/policies', protect, getLeavePolicies);  // Allow all authenticated users to view policies
 router.put('/:id', protect, updateLeave);
 router.delete('/:id', protect, cancelLeave);
 

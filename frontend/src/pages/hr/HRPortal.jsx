@@ -272,59 +272,6 @@ const HRDashboard = () => {
               </div>
             </div>
 
-            {/* Secondary Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {/* New Hires Card */}
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-blue-100 text-sm font-semibold uppercase tracking-wide">New Hires This Month</p>
-                    <p className="text-4xl font-bold mt-2">{dashboardData.newHires}</p>
-                  </div>
-                  <div className="bg-white/20 p-3 rounded-xl">
-                    <UserCheck className="w-8 h-8" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  <span className="text-sm">Onboarding in progress</span>
-                </div>
-              </div>
-
-              {/* Department Performance */}
-              <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl shadow-lg p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-emerald-100 text-sm font-semibold uppercase tracking-wide">Department Performance</p>
-                    <p className="text-4xl font-bold mt-2">85.2%</p>
-                  </div>
-                  <div className="bg-white/20 p-3 rounded-xl">
-                    <Award className="w-8 h-8" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  <span className="text-sm">Above average</span>
-                </div>
-              </div>
-
-              {/* Payroll Status */}
-              <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-purple-100 text-sm font-semibold uppercase tracking-wide">Monthly Payroll</p>
-                    <p className="text-4xl font-bold mt-2">LKR 4.8M</p>
-                  </div>
-                  <div className="bg-white/20 p-3 rounded-xl">
-                    <DollarSign className="w-8 h-8" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm">Processed this month</span>
-                </div>
-              </div>
-            </div>
 
             {/* Charts and Analytics Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

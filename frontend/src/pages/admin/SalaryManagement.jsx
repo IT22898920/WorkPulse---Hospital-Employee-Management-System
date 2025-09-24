@@ -8,6 +8,7 @@ import {
 import { salaryService } from '../../services/salaryService';
 import { employeeService } from '../../services/employeeService';
 import { useToast } from '../../contexts/ToastContext';
+import { formatCurrency } from '../../utils/currencyFormatter';
 
 const SalaryManagement = () => {
   const { showSuccess, showError } = useToast();
@@ -22,7 +23,15 @@ const SalaryManagement = () => {
 
   // Generate Salary Form State
   const [selectedEmployee, setSelectedEmployee] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const currentMonth = new Date().getMonth();
+    return months[currentMonth];
+  });
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [calculatedData, setCalculatedData] = useState(null);
   const [manualData, setManualData] = useState({
@@ -32,12 +41,45 @@ const SalaryManagement = () => {
     apit: 0
   });
 
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+
+  // Function to calculate allowances total if not provided by backend
+  const calculateAllowancesTotal = (allowances) => {
+    if (!allowances) return 0;
+
+    const total = (allowances.costOfLiving || 0) +
+                  (allowances.food || 0) +
+                  (allowances.conveyance || 0) +
+                  (allowances.medical || 0);
+
+    return total;
+  };
+
+  // Function to ensure salary data has calculated totals
+  const processSalaryData = (data) => {
+    if (!data) return data;
+
+    // Calculate allowances total if not provided or if it's 0
+    if (data.allowances && (!data.allowances.total || data.allowances.total === 0)) {
+      data.allowances.total = calculateAllowancesTotal(data.allowances);
+    }
+
+    return data;
+  };
+
+  // Handler for manual input fields with better UX
+  const handleManualInputChange = (field, value) => {
+    setManualData({
+      ...manualData,
+      [field]: parseInt(value) || 0
+    });
+  };
+
+  // Handler for input focus - select all text when focused (especially useful for 0 values)
+  const handleInputFocus = (e) => {
+    // Select all text when focusing on the input, making it easy to replace
+    e.target.select();
+  };
 
   useEffect(() => {
     fetchEmployees();
@@ -56,7 +98,8 @@ const SalaryManagement = () => {
   const fetchSalaryRecords = async () => {
     try {
       const response = await salaryService.getAllSalaries({ limit: 50 });
-      setSalaryRecords(response.data || []);
+      const processedRecords = (response.data || []).map(record => processSalaryData(record));
+      setSalaryRecords(processedRecords);
     } catch (error) {
       console.error('Error fetching salary records:', error);
     }
@@ -71,7 +114,8 @@ const SalaryManagement = () => {
     try {
       setLoading(true);
       const response = await salaryService.calculateSalary(selectedEmployee, selectedMonth, selectedYear);
-      setCalculatedData(response.data);
+      const processedData = processSalaryData(response.data);
+      setCalculatedData(processedData);
       showSuccess('Salary calculated successfully!');
     } catch (error) {
       console.error('Error calculating salary:', error);
@@ -153,7 +197,8 @@ const SalaryManagement = () => {
       // Reset form
       setCalculatedData(null);
       setSelectedEmployee('');
-      setSelectedMonth('');
+      setSelectedMonth(months[new Date().getMonth()]); // Reset to current month
+      setSelectedYear(new Date().getFullYear()); // Reset to current year
       setManualData({ salaryAdvance: 0, bonus: 0, reimbursements: 0, apit: 0 });
 
       // Refresh records
@@ -301,32 +346,35 @@ const SalaryManagement = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Month *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Month * (Current Month Only)</label>
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3"
+                    className="w-full rounded-xl border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-3 cursor-not-allowed"
                     required
+                    disabled
                   >
-                    <option value="">Select Month</option>
-                    {months.map(month => (
-                      <option key={month} value={month}>{month}</option>
-                    ))}
+                    <option value={selectedMonth}>{selectedMonth}</option>
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Only current month ({selectedMonth}) salary can be generated
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Year *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Year * (Current Year Only)</label>
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                    className="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3"
+                    className="w-full rounded-xl border-gray-300 shadow-sm bg-gray-50 text-gray-700 p-3 cursor-not-allowed"
                     required
+                    disabled
                   >
-                    {years.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
+                    <option value={selectedYear}>{selectedYear}</option>
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Only current year ({selectedYear}) salary can be generated
+                  </p>
                 </div>
               </div>
 
@@ -395,12 +443,12 @@ const SalaryManagement = () => {
                     Basic Salary & Allowances
                   </h4>
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                    <div><strong>Basic Salary:</strong> LKR {calculatedData.basicSalary?.toLocaleString()}</div>
-                    <div><strong>Cost of Living:</strong> LKR {calculatedData.allowances?.costOfLiving?.toLocaleString()}</div>
-                    <div><strong>Food Allowance:</strong> LKR {calculatedData.allowances?.food?.toLocaleString()}</div>
-                    <div><strong>Conveyance:</strong> LKR {calculatedData.allowances?.conveyance?.toLocaleString()}</div>
-                    <div><strong>Medical:</strong> LKR {calculatedData.allowances?.medical?.toLocaleString()}</div>
-                    <div className="font-bold text-blue-700"><strong>Total Allowances:</strong> LKR {calculatedData.allowances?.total?.toLocaleString()}</div>
+                    <div><strong>Basic Salary:</strong> {formatCurrency(calculatedData.basicSalary)}</div>
+                    <div><strong>Cost of Living:</strong> {formatCurrency(calculatedData.allowances?.costOfLiving)}</div>
+                    <div><strong>Food Allowance:</strong> {formatCurrency(calculatedData.allowances?.food)}</div>
+                    <div><strong>Conveyance:</strong> {formatCurrency(calculatedData.allowances?.conveyance)}</div>
+                    <div><strong>Medical:</strong> {formatCurrency(calculatedData.allowances?.medical)}</div>
+                    <div className="font-bold text-blue-700"><strong>Total Allowances:</strong> {formatCurrency(calculatedData.allowances?.total)}</div>
                   </div>
                 </div>
 
@@ -411,9 +459,9 @@ const SalaryManagement = () => {
                     Additional Earnings
                   </h4>
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                    <div><strong>Overtime Pay:</strong> LKR {calculatedData.additionalPerks?.overtime?.toLocaleString()}</div>
-                    <div><strong>Reimbursements:</strong> LKR {calculatedData.additionalPerks?.reimbursements?.toLocaleString()}</div>
-                    <div><strong>Bonus:</strong> LKR {calculatedData.additionalPerks?.bonus?.toLocaleString()}</div>
+                    <div><strong>Overtime Pay:</strong> {formatCurrency(calculatedData.additionalPerks?.overtime)}</div>
+                    <div><strong>Reimbursements:</strong> {formatCurrency(calculatedData.additionalPerks?.reimbursements)}</div>
+                    <div><strong>Bonus:</strong> {formatCurrency(calculatedData.additionalPerks?.bonus)}</div>
                   </div>
                 </div>
 
@@ -427,19 +475,19 @@ const SalaryManagement = () => {
                     <div className="space-y-2">
                       <div className="text-sm font-medium text-indigo-700">Employee Contributions (Deductions):</div>
                       <div className="text-sm pl-4">
-                        <div>EPF Employee (8%): LKR {Math.round(calculatedData.basicSalary * 0.08).toLocaleString()}</div>
+                        <div>EPF Employee (8%): {formatCurrency(Math.round(calculatedData.basicSalary * 0.08))}</div>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <div className="text-sm font-medium text-indigo-700">Employer Contributions (Company Pays):</div>
                       <div className="text-sm pl-4">
-                        <div>EPF Employer (12%): LKR {Math.round(calculatedData.basicSalary * 0.12).toLocaleString()}</div>
-                        <div>ETF (3%): LKR {Math.round(calculatedData.basicSalary * 0.03).toLocaleString()}</div>
+                        <div>EPF Employer (12%): {formatCurrency(Math.round(calculatedData.basicSalary * 0.12))}</div>
+                        <div>ETF (3%): {formatCurrency(Math.round(calculatedData.basicSalary * 0.03))}</div>
                       </div>
                     </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-indigo-200">
-                    <div className="text-sm"><strong>Total Company Contribution:</strong> LKR {Math.round(calculatedData.basicSalary * 0.15).toLocaleString()}</div>
+                    <div className="text-sm"><strong>Total Company Contribution:</strong> {formatCurrency(Math.round(calculatedData.basicSalary * 0.15))}</div>
                   </div>
                 </div>
 
@@ -450,10 +498,10 @@ const SalaryManagement = () => {
                     Deductions
                   </h4>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                    <div><strong>EPF Employee (8%):</strong> LKR {Math.round(calculatedData.basicSalary * 0.08).toLocaleString()}</div>
-                    <div><strong>No Pay Deduction:</strong> LKR {calculatedData.deductions?.noPayDaysDeduction?.toLocaleString()}</div>
-                    <div><strong>Salary Advance:</strong> LKR {calculatedData.deductions?.salaryAdvance?.toLocaleString()}</div>
-                    <div><strong>APIT:</strong> LKR {calculatedData.deductions?.apit?.toLocaleString()}</div>
+                    <div><strong>EPF Employee (8%):</strong> {formatCurrency(Math.round(calculatedData.basicSalary * 0.08))}</div>
+                    <div><strong>No Pay Deduction:</strong> {formatCurrency(calculatedData.deductions?.noPayDaysDeduction)}</div>
+                    <div><strong>Salary Advance:</strong> {formatCurrency(calculatedData.deductions?.salaryAdvance)}</div>
+                    <div><strong>APIT:</strong> {formatCurrency(calculatedData.deductions?.apit)}</div>
                   </div>
                 </div>
 
@@ -466,9 +514,9 @@ const SalaryManagement = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="space-y-2">
                       <div className="font-semibold text-green-700">EARNINGS:</div>
-                      <div>Basic Salary: LKR {calculatedData.basicSalary?.toLocaleString()}</div>
-                      <div>Allowances: LKR {calculatedData.allowances?.total?.toLocaleString()}</div>
-                      <div>Overtime: LKR {calculatedData.additionalPerks?.overtime?.toLocaleString()}</div>
+                      <div>Basic Salary: {formatCurrency(calculatedData.basicSalary)}</div>
+                      <div>Allowances: {formatCurrency(calculatedData.allowances?.total)}</div>
+                      <div>Overtime: {formatCurrency(calculatedData.additionalPerks?.overtime)}</div>
                       <div className="border-t pt-1 font-semibold">
                         Gross Salary: LKR {(
                           calculatedData.basicSalary +
@@ -479,9 +527,9 @@ const SalaryManagement = () => {
                     </div>
                     <div className="space-y-2">
                       <div className="font-semibold text-red-700">DEDUCTIONS:</div>
-                      <div>EPF (8%): LKR {Math.round(calculatedData.basicSalary * 0.08).toLocaleString()}</div>
-                      <div>No Pay: LKR {calculatedData.deductions?.noPayDaysDeduction?.toLocaleString()}</div>
-                      <div>APIT: LKR {calculatedData.deductions?.apit?.toLocaleString()}</div>
+                      <div>EPF (8%): {formatCurrency(Math.round(calculatedData.basicSalary * 0.08))}</div>
+                      <div>No Pay: {formatCurrency(calculatedData.deductions?.noPayDaysDeduction)}</div>
+                      <div>APIT: {formatCurrency(calculatedData.deductions?.apit)}</div>
                       <div className="border-t pt-1 font-semibold">
                         Total Deductions: LKR {(
                           Math.round(calculatedData.basicSalary * 0.08) +
@@ -529,29 +577,29 @@ const SalaryManagement = () => {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div className="space-y-2">
                           <div className="font-semibold text-green-700">UPDATED EARNINGS:</div>
-                          <div>Basic: LKR {calculatedData.basicSalary?.toLocaleString()}</div>
-                          <div>Allowances: LKR {(calculatedData.allowances?.total || 0).toLocaleString()}</div>
-                          <div>Overtime: LKR {(calculatedData.additionalPerks?.overtime || 0).toLocaleString()}</div>
-                          <div>Bonus: LKR {manualData.bonus.toLocaleString()}</div>
-                          <div>Reimbursements: LKR {manualData.reimbursements.toLocaleString()}</div>
+                          <div>Basic: {formatCurrency(calculatedData.basicSalary)}</div>
+                          <div>Allowances: {formatCurrency(calculatedData.allowances?.total || 0)}</div>
+                          <div>Overtime: {formatCurrency(calculatedData.additionalPerks?.overtime || 0)}</div>
+                          <div>Bonus: {formatCurrency(manualData.bonus)}</div>
+                          <div>Reimbursements: {formatCurrency(manualData.reimbursements)}</div>
                           <div className="border-t pt-1 font-semibold text-green-800">
-                            Gross: LKR {grossSalary.toLocaleString()}
+                            Gross: {formatCurrency(grossSalary)}
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="font-semibold text-red-700">UPDATED DEDUCTIONS:</div>
-                          <div>EPF (8%): LKR {epfDeduction.toLocaleString()}</div>
-                          <div>No Pay: LKR {(calculatedData.deductions?.noPayDaysDeduction || 0).toLocaleString()}</div>
-                          <div>Salary Advance: LKR {manualData.salaryAdvance.toLocaleString()}</div>
-                          <div>APIT: LKR {manualData.apit.toLocaleString()}</div>
+                          <div>EPF (8%): {formatCurrency(epfDeduction)}</div>
+                          <div>No Pay: {formatCurrency(calculatedData.deductions?.noPayDaysDeduction || 0)}</div>
+                          <div>Salary Advance: {formatCurrency(manualData.salaryAdvance)}</div>
+                          <div>APIT: {formatCurrency(manualData.apit)}</div>
                           <div className="border-t pt-1 font-semibold text-red-800">
-                            Total: LKR {totalDeductions.toLocaleString()}
+                            Total: {formatCurrency(totalDeductions)}
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="font-bold text-blue-700 text-lg">FINAL NET SALARY:</div>
                           <div className="text-3xl font-bold text-blue-600">
-                            LKR {netSalary.toLocaleString()}
+                            {formatCurrency(netSalary)}
                           </div>
                           <div className="text-sm text-gray-600">
                             {netSalary > 0 ? '✅ Ready to save' : '❌ Negative salary'}
@@ -563,45 +611,94 @@ const SalaryManagement = () => {
                 </div>
 
                 {/* Manual input fields */}
-                <div className="bg-yellow-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-yellow-800 mb-3">Manual Entry Required</h4>
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
+                  <h4 className="font-bold text-blue-800 mb-4 flex items-center gap-2">
+                    <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">!</span>
+                    Manual Entry Required
+                  </h4>
+                  <p className="text-blue-700 text-sm mb-4">Enter additional amounts below. Leave as 0 if not applicable.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Salary Advance</label>
-                      <input
-                        type="number"
-                        value={manualData.salaryAdvance}
-                        onChange={(e) => setManualData({...manualData, salaryAdvance: parseInt(e.target.value) || 0})}
-                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm"
-                      />
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Salary Advance (Deduction)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">LKR</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={manualData.salaryAdvance}
+                          onChange={(e) => handleManualInputChange('salaryAdvance', e.target.value)}
+                          onFocus={handleInputFocus}
+                          className="w-full pl-12 pr-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-medium"
+                          placeholder="Enter amount"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Amount to deduct from salary</p>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Bonus</label>
-                      <input
-                        type="number"
-                        value={manualData.bonus}
-                        onChange={(e) => setManualData({...manualData, bonus: parseInt(e.target.value) || 0})}
-                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm"
-                      />
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Performance Bonus (Addition)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">LKR</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={manualData.bonus}
+                          onChange={(e) => handleManualInputChange('bonus', e.target.value)}
+                          onFocus={handleInputFocus}
+                          className="w-full pl-12 pr-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-medium"
+                          placeholder="Enter amount"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Additional bonus amount</p>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Reimbursements</label>
-                      <input
-                        type="number"
-                        value={manualData.reimbursements}
-                        onChange={(e) => setManualData({...manualData, reimbursements: parseInt(e.target.value) || 0})}
-                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm"
-                      />
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Reimbursements (Addition)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">LKR</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={manualData.reimbursements}
+                          onChange={(e) => handleManualInputChange('reimbursements', e.target.value)}
+                          onFocus={handleInputFocus}
+                          className="w-full pl-12 pr-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-medium"
+                          placeholder="Enter amount"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Expense reimbursements</p>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">APIT</label>
-                      <input
-                        type="number"
-                        value={manualData.apit}
-                        onChange={(e) => setManualData({...manualData, apit: parseInt(e.target.value) || 0})}
-                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 text-sm"
-                      />
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        APIT Tax (Deduction)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">LKR</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={manualData.apit}
+                          onChange={(e) => handleManualInputChange('apit', e.target.value)}
+                          onFocus={handleInputFocus}
+                          className="w-full pl-12 pr-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-medium"
+                          placeholder="Enter amount"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Advanced Personal Income Tax</p>
                     </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                    <p className="text-blue-800 text-sm font-medium">
+                      💡 Tip: Values will automatically update the salary calculation above
+                    </p>
                   </div>
                 </div>
 
@@ -698,7 +795,7 @@ const SalaryManagement = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Amount</p>
                   <p className="text-2xl font-bold text-purple-600 mt-2">
-                    LKR {salaryRecords.reduce((sum, s) => sum + (s.netPayableSalary || 0), 0).toLocaleString()}
+                    {formatCurrency(salaryRecords.reduce((sum, s) => sum + (s.netPayableSalary || 0), 0))}
                   </p>
                 </div>
                 <div className="bg-purple-100 p-3 rounded-full">
@@ -750,10 +847,10 @@ const SalaryManagement = () => {
                         {salary.month} {salary.year}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        LKR {salary.basicSalary?.toLocaleString()}
+                        {formatCurrency(salary.basicSalary)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        LKR {salary.netPayableSalary?.toLocaleString()}
+                        {formatCurrency(salary.netPayableSalary)}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(salary.status)}`}>

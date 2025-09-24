@@ -13,7 +13,6 @@ import {
   ChevronRight,
   Building2,
   X,
-  Clock,
   DollarSign
 } from 'lucide-react';
 
@@ -21,7 +20,6 @@ const HRSidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const [expandedMenus, setExpandedMenus] = useState({
     employees: false,
-    leave: false,
     payroll: false,
     reports: false
   });
@@ -57,23 +55,6 @@ const HRSidebar = ({ isOpen, onClose }) => {
       ]
     },
     {
-      id: 'attendance',
-      title: 'Attendance',
-      icon: Clock,
-      path: '/hr/attendance'
-    },
-    {
-      id: 'leave',
-      title: 'Leave Management',
-      icon: Calendar,
-      expandable: true,
-      submenu: [
-        { title: 'Leave Requests', icon: Calendar, path: '/hr/leave/requests' },
-        { title: 'Leave Balance', icon: ClipboardList, path: '/hr/leave/balance' },
-        { title: 'Leave Policies', icon: FileText, path: '/hr/leave/policies' }
-      ]
-    },
-    {
       id: 'payroll',
       title: 'Salary Management',
       icon: DollarSign,
@@ -90,9 +71,7 @@ const HRSidebar = ({ isOpen, onClose }) => {
       icon: BarChart3,
       expandable: true,
       submenu: [
-        { title: 'Employee Reports', icon: Users, path: '/hr/reports/employees' },
-        { title: 'Attendance Reports', icon: Clock, path: '/hr/reports/attendance' },
-        { title: 'Leave Reports', icon: Calendar, path: '/hr/reports/leave' }
+        { title: 'Employee Reports', icon: Users, path: '/hr/reports/employees' }
       ]
     },
     {

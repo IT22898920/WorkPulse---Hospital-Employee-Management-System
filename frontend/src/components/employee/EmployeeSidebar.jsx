@@ -143,7 +143,7 @@ const EmployeeSidebar = ({ isOpen, onClose }) => {
       submenu: [
         { title: 'Apply for Leave', icon: Calendar, path: '/employee/leaves/apply' },
         { title: 'My Leave Requests', icon: ClipboardList, path: '/employee/leaves' },
-        { title: 'Leave Balance', icon: FileText, path: '/employee/leaves/balance' }
+        { title: 'Leave Policies', icon: FileText, path: '/employee/leaves/policies' }
       ]
     },
     {

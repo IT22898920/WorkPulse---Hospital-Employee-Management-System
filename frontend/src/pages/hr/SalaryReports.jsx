@@ -7,6 +7,7 @@ import {
 import { salaryService } from '../../services/salaryService';
 import { employeeService } from '../../services/employeeService';
 import { useToast } from '../../contexts/ToastContext';
+import { formatCurrency } from '../../utils/currencyFormatter';
 
 const SalaryReports = () => {
   const { showSuccess, showError } = useToast();
@@ -34,7 +35,52 @@ const SalaryReports = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+  // Generate years array - current year and previous years only (no future years)
+  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).sort((a, b) => b - a);
+
+  // Get available months (current month and previous months only)
+  const getAvailableMonths = () => {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth(); // 0-based (0 = January)
+
+    // If selected year is current year, only show up to current month
+    if (filters.year === currentYear) {
+      return months.slice(0, currentMonth + 1).map((month, index) => ({
+        name: month,
+        value: index + 1
+      }));
+    }
+
+    // If selected year is previous year, show all months
+    if (filters.year < currentYear) {
+      return months.map((month, index) => ({
+        name: month,
+        value: index + 1
+      }));
+    }
+
+    // If somehow future year is selected, show no months
+    return [];
+  };
+
+  // Handle year change - reset month if it's not available for the selected year
+  const handleYearChange = (newYear) => {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1; // 1-based for comparison with filters.month
+
+    let newMonth = filters.month;
+
+    // If changing to current year and selected month is in the future, reset to current month
+    if (newYear === currentYear && filters.month > currentMonth) {
+      newMonth = currentMonth;
+    }
+
+    setFilters({
+      ...filters,
+      year: newYear,
+      month: newMonth
+    });
+  };
 
   useEffect(() => {
     fetchData();
@@ -307,8 +353,8 @@ const SalaryReports = () => {
                       onChange={(e) => setFilters({ ...filters, month: parseInt(e.target.value) })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white appearance-none cursor-pointer font-medium text-gray-800 shadow-sm hover:shadow-md"
                     >
-                      {months.map((month, index) => (
-                        <option key={month} value={index + 1}>{month}</option>
+                      {getAvailableMonths().map((month) => (
+                        <option key={month.name} value={month.value}>{month.name}</option>
                       ))}
                     </select>
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-blue-600 p-1 rounded-md">
@@ -323,7 +369,7 @@ const SalaryReports = () => {
                   <div className="relative">
                     <select
                       value={filters.year}
-                      onChange={(e) => setFilters({ ...filters, year: parseInt(e.target.value) })}
+                      onChange={(e) => handleYearChange(parseInt(e.target.value))}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white appearance-none cursor-pointer font-medium text-gray-800 shadow-sm hover:shadow-md"
                     >
                       {years.map(year => (
@@ -412,7 +458,7 @@ const SalaryReports = () => {
                       <p className="text-gray-600 text-sm font-semibold uppercase tracking-wide">Total Payroll</p>
                     </div>
                     <p className="text-3xl font-bold text-gray-900 mb-1">
-                      LKR {reportData.totalPayroll.toLocaleString()}
+                      {formatCurrency(reportData.totalPayroll)}
                     </p>
                     <p className="text-gray-500 text-sm font-medium">
                       {months[filters.month - 1]} {filters.year}
@@ -466,7 +512,7 @@ const SalaryReports = () => {
                       <p className="text-gray-600 text-sm font-semibold uppercase tracking-wide">Average Salary</p>
                     </div>
                     <p className="text-3xl font-bold text-gray-900 mb-1">
-                      LKR {Math.round(reportData.averageSalary).toLocaleString()}
+                      {formatCurrency(Math.round(reportData.averageSalary))}
                     </p>
                     <p className="text-gray-500 text-sm font-medium">
                       Per employee
@@ -493,7 +539,7 @@ const SalaryReports = () => {
                       <p className="text-gray-600 text-sm font-semibold uppercase tracking-wide">Total Deductions</p>
                     </div>
                     <p className="text-3xl font-bold text-gray-900 mb-1">
-                      LKR {reportData.totalDeductions.toLocaleString()}
+                      {formatCurrency(reportData.totalDeductions)}
                     </p>
                     <p className="text-gray-500 text-sm font-medium">
                       EPF, taxes, etc.
@@ -627,7 +673,7 @@ const SalaryReports = () => {
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-bold text-gray-900">{percentage}%</div>
-                            <div className="text-xs text-gray-500">LKR {dept.totalSalary.toLocaleString()}</div>
+                            <div className="text-xs text-gray-500">{formatCurrency(dept.totalSalary)}</div>
                           </div>
                         </div>
                       );
@@ -657,11 +703,11 @@ const SalaryReports = () => {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-gray-600">Total Salary:</span>
-                          <div className="font-bold text-green-600">LKR {dept.totalSalary.toLocaleString()}</div>
+                          <div className="font-bold text-green-600">{formatCurrency(dept.totalSalary)}</div>
                         </div>
                         <div>
                           <span className="text-gray-600">Average:</span>
-                          <div className="font-bold text-blue-600">LKR {Math.round(dept.averageSalary).toLocaleString()}</div>
+                          <div className="font-bold text-blue-600">{formatCurrency(Math.round(dept.averageSalary))}</div>
                         </div>
                       </div>
                       <div className="mt-3 bg-gray-200 rounded-full h-2">
@@ -885,10 +931,10 @@ const SalaryReports = () => {
                             {mapDepartmentName(record)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                            LKR {(record.basicSalary || 0).toLocaleString()}
+                            {formatCurrency(record.basicSalary || 0)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
-                            LKR {(record.netPayableSalary || 0).toLocaleString()}
+                            {formatCurrency(record.netPayableSalary || 0)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

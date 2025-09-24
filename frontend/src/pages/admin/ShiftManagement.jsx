@@ -497,7 +497,7 @@ const ShiftManagement = () => {
                   <div key={day} className="p-3 text-center text-sm font-semibold text-gray-600 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl">
                     {day}
                   </div>
-                ))}}
+                ))}
 
                 {/* Enhanced Calendar Days */}
                 {calendarDays.map((day, index) => {

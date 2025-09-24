@@ -16,6 +16,7 @@ const ApplyLeave = () => {
     location: ''
   });
   const [leaveBalance, setLeaveBalance] = useState({});
+  const [existingLeaves, setExistingLeaves] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -29,29 +30,89 @@ const ApplyLeave = () => {
   ];
 
   useEffect(() => {
-    fetchLeaveBalance();
+    fetchData();
   }, []);
 
-  const fetchLeaveBalance = async () => {
+  const fetchData = async () => {
     try {
-      const response = await leaveService.getLeaveBalance();
-      if (response.success) {
-        setLeaveBalance(response.data);
+      // Fetch existing leaves for date blocking
+      const leavesResponse = await leaveService.getMyLeaves();
+
+      if (leavesResponse.success) {
+        setExistingLeaves(leavesResponse.data || []);
       }
     } catch (error) {
-      console.error('Error fetching leave balance:', error);
-      showError('Failed to fetch leave balance');
+      console.error('Error fetching leave data:', error);
+      showError('Failed to fetch leave data');
     } finally {
       setLoading(false);
     }
   };
 
+  // Get all blocked dates (dates with existing leaves)
+  const getBlockedDates = () => {
+    const blockedDates = [];
+
+    existingLeaves.forEach(leave => {
+      // Skip rejected or cancelled leaves
+      if (leave.status === 'rejected' || leave.status === 'cancelled') {
+        return;
+      }
+
+      const startDate = new Date(leave.startDate);
+      const endDate = new Date(leave.endDate);
+
+      // Add all dates between start and end (inclusive)
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        blockedDates.push(d.toISOString().split('T')[0]);
+      }
+    });
+
+    return blockedDates;
+  };
+
+  // Check if a specific date is blocked
+  const isDateBlocked = (dateString) => {
+    if (!dateString) return false;
+    const blockedDates = getBlockedDates();
+    return blockedDates.includes(dateString);
+  };
+
+  // Validate date selection
+  const handleDateChange = (field, value) => {
+    if (isDateBlocked(value)) {
+      showError('This date already has a leave application. Please select a different date.');
+      return; // Don't update if date is blocked
+    }
+
+    if (field === 'startDate') {
+      setFormData({
+        ...formData,
+        startDate: value,
+        endDate: value > formData.endDate ? value : formData.endDate
+      });
+    } else {
+      setFormData({ ...formData, endDate: value });
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+    if (name === 'emergencyContact') {
+      const numericValue = value.replace(/\D/g, '');
+      if (numericValue.length <= 10) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: numericValue
+        }));
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const calculateDaysRequested = () => {
@@ -78,15 +139,6 @@ const ApplyLeave = () => {
     }
 
     const daysRequested = calculateDaysRequested();
-    const selectedType = leaveTypes.find(type => type.value === formData.type);
-    const availableBalance = leaveBalance[formData.type] || 0;
-
-    if (daysRequested > availableBalance) {
-      const proceed = window.confirm(`You have insufficient leave balance. You have ${availableBalance} days available for ${selectedType?.label} but requesting ${daysRequested} days. Do you want to submit anyway for manager approval?`);
-      if (!proceed) {
-        return;
-      }
-    }
 
     setSubmitting(true);
     try {
@@ -123,9 +175,6 @@ const ApplyLeave = () => {
     }
   };
 
-  const selectedType = leaveTypes.find(type => type.value === formData.type);
-  const daysRequested = calculateDaysRequested();
-  const availableBalance = formData.type ? (leaveBalance[formData.type] || 0) : 0;
 
   if (loading) {
     return (
@@ -153,69 +202,8 @@ const ApplyLeave = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Leave Balance Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                <Calendar className="h-6 w-6 mr-2 text-blue-600" />
-                Leave Balance
-              </h3>
-              <div className="space-y-3">
-                {leaveTypes.map((type) => {
-                  const balance = leaveBalance[type.value] || 0;
-                  return (
-                    <div key={type.value} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                      <div className="flex items-center">
-                        <div className={`w-8 h-8 ${type.color} rounded-full flex items-center justify-center text-white text-sm mr-3`}>
-                          {type.icon}
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">{type.label}</span>
-                      </div>
-                      <span className="text-lg font-bold text-gray-800">{balance}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Application Summary */}
-            {formData.type && (
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-xl p-6 text-white">
-                <h3 className="text-xl font-semibold mb-4">Application Summary</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span>Leave Type:</span>
-                    <span className="font-semibold">{selectedType?.label}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Days Requested:</span>
-                    <span className="font-semibold">{daysRequested}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Available Balance:</span>
-                    <span className="font-semibold">{availableBalance}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Remaining After:</span>
-                    <span className={`font-semibold ${availableBalance - daysRequested >= 0 ? 'text-green-200' : 'text-red-200'}`}>
-                      {availableBalance - daysRequested}
-                    </span>
-                  </div>
-                </div>
-                {daysRequested > availableBalance && (
-                  <div className="mt-4 p-3 bg-red-500 bg-opacity-20 rounded-lg flex items-center">
-                    <AlertCircle className="h-5 w-5 mr-2" />
-                    <span className="text-sm">Insufficient balance!</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Application Form */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-xl p-8">
+        {/* Application Form */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Leave Type Selection */}
                 <div>
@@ -239,9 +227,6 @@ const ApplyLeave = () => {
                             {type.icon}
                           </div>
                           <div className="text-sm font-medium text-gray-700">{type.label}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {leaveBalance[type.value] || 0} days
-                          </div>
                         </div>
                       </button>
                     ))}
@@ -253,6 +238,11 @@ const ApplyLeave = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Start Date <span className="text-red-500">*</span>
+                      {getBlockedDates().length > 0 && (
+                        <span className="text-xs text-red-500 ml-2">
+                          (Some dates unavailable due to existing leaves)
+                        </span>
+                      )}
                     </label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -260,16 +250,30 @@ const ApplyLeave = () => {
                         type="date"
                         name="startDate"
                         value={formData.startDate}
-                        onChange={handleInputChange}
+                        onChange={(e) => handleDateChange('startDate', e.target.value)}
                         min={new Date().toISOString().split('T')[0]}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 transition-all duration-200 ${
+                          isDateBlocked(formData.startDate)
+                            ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                        }`}
                         required
                       />
                     </div>
+                    {isDateBlocked(formData.startDate) && (
+                      <p className="text-xs text-red-500 mt-1">
+                        This date has an existing leave application
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       End Date <span className="text-red-500">*</span>
+                      {getBlockedDates().length > 0 && (
+                        <span className="text-xs text-red-500 ml-2">
+                          (Some dates unavailable due to existing leaves)
+                        </span>
+                      )}
                     </label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -277,14 +281,51 @@ const ApplyLeave = () => {
                         type="date"
                         name="endDate"
                         value={formData.endDate}
-                        onChange={handleInputChange}
+                        onChange={(e) => handleDateChange('endDate', e.target.value)}
                         min={formData.startDate || new Date().toISOString().split('T')[0]}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 transition-all duration-200 ${
+                          isDateBlocked(formData.endDate)
+                            ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                        }`}
                         required
                       />
                     </div>
+                    {isDateBlocked(formData.endDate) && (
+                      <p className="text-xs text-red-500 mt-1">
+                        This date has an existing leave application
+                      </p>
+                    )}
                   </div>
                 </div>
+
+                {/* Show blocked dates information */}
+                {getBlockedDates().length > 0 && (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                    <div className="flex items-center mb-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 mr-2" />
+                      <h4 className="text-sm font-medium text-yellow-800">Unavailable Dates</h4>
+                    </div>
+                    <p className="text-sm text-yellow-700 mb-2">
+                      The following dates already have leave applications:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {getBlockedDates().slice(0, 10).map((date, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-md text-xs"
+                        >
+                          {new Date(date + 'T00:00:00').toLocaleDateString()}
+                        </span>
+                      ))}
+                      {getBlockedDates().length > 10 && (
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-md text-xs">
+                          +{getBlockedDates().length - 10} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Reason */}
                 <div>
@@ -356,8 +397,6 @@ const ApplyLeave = () => {
                     className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${
                       submitting
                         ? 'bg-gray-400 cursor-not-allowed'
-                        : (formData.type && daysRequested > availableBalance)
-                        ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl'
                         : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl'
                     }`}
                   >
@@ -368,24 +407,13 @@ const ApplyLeave = () => {
                       </>
                     ) : (
                       <>
-                        {(formData.type && daysRequested > availableBalance) ? (
-                          <>
-                            <AlertCircle className="h-5 w-5 mr-2" />
-                            Submit (Insufficient Balance)
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="h-5 w-5 mr-2" />
-                            Submit Application
-                          </>
-                        )}
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        Submit Application
                       </>
                     )}
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
         </div>
       </div>
     </div>

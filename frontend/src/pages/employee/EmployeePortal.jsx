@@ -15,7 +15,7 @@ import ApplyLeave from './ApplyLeave';
 import MySchedule from './MySchedule';
 import MySalary from './MySalary';
 import MyProfile from './MyProfile';
-import LeaveBalance from './LeaveBalance';
+import LeavePolicies from './LeavePolicies';
 
 const EmployeePortal = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -50,7 +50,7 @@ const EmployeePortal = () => {
             <Route path="/attendance/reports" element={<AttendanceReports />} />
             <Route path="/leaves" element={<MyLeave />} />
             <Route path="/leaves/apply" element={<ApplyLeave />} />
-            <Route path="/leaves/balance" element={<LeaveBalance />} />
+            <Route path="/leaves/policies" element={<LeavePolicies />} />
             <Route path="/schedule" element={<MySchedule />} />
             <Route path="/salary" element={<MySalary />} />
             <Route path="/profile" element={<MyProfile />} />

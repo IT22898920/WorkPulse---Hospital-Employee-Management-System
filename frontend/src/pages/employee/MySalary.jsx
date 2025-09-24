@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { salaryService } from '../../services/salaryService';
 import { useToast } from '../../contexts/ToastContext';
+import { formatCurrency } from '../../utils/currencyFormatter';
 
 const MySalary = () => {
   const { showSuccess, showError } = useToast();
@@ -144,7 +145,7 @@ const MySalary = () => {
                     onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    {[2024, 2023, 2022, 2021, 2020].map(year => (
+                    {[2025, 2024, 2023, 2022, 2021, 2020].map(year => (
                       <option key={year} value={year}>{year}</option>
                     ))}
                   </select>
@@ -187,7 +188,7 @@ const MySalary = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Earned</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
-                  LKR {stats.totalEarned.toLocaleString()}
+                  {formatCurrency(stats.totalEarned)}
                 </p>
                 <p className="text-sm text-blue-600 mt-1">This Year</p>
               </div>
@@ -202,7 +203,7 @@ const MySalary = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Average Salary</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
-                  LKR {Math.round(stats.avgSalary).toLocaleString()}
+                  {formatCurrency(Math.round(stats.avgSalary))}
                 </p>
                 <p className="text-sm text-green-600 mt-1">Per Month</p>
               </div>
@@ -217,7 +218,7 @@ const MySalary = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Highest Salary</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
-                  LKR {stats.highestSalary.toLocaleString()}
+                  {formatCurrency(stats.highestSalary)}
                 </p>
                 <p className="text-sm text-purple-600 mt-1">Best Month</p>
               </div>
@@ -296,16 +297,16 @@ const MySalary = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          LKR {salary.basicSalary?.toLocaleString() || 0}
+                          {formatCurrency(salary.basicSalary || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          LKR {salary.grossSalary?.toLocaleString() || 0}
+                          {formatCurrency(salary.grossSalary || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                          LKR {salary.deductions?.total?.toLocaleString() || 0}
+                          {formatCurrency(salary.deductions?.total || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
-                          LKR {salary.netPayableSalary?.toLocaleString() || 0}
+                          {formatCurrency(salary.netPayableSalary || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(salary.status)}`}>
@@ -397,7 +398,7 @@ const MySalary = () => {
                             <div className="flex items-center justify-between mb-3">
                               <h4 className="font-semibold text-gray-900">{salary.month} {salary.year}</h4>
                               <div className="text-sm text-gray-600">
-                                Max: LKR {(salary.grossSalary || 0).toLocaleString()}
+                                Max: {formatCurrency(salary.grossSalary || 0)}
                               </div>
                             </div>
 
@@ -406,7 +407,7 @@ const MySalary = () => {
                               <div className="flex justify-between items-center mb-1">
                                 <span className="text-sm text-gray-600">Gross Salary</span>
                                 <span className="text-sm font-semibold text-green-600">
-                                  LKR {(salary.grossSalary || 0).toLocaleString()}
+                                  {formatCurrency(salary.grossSalary || 0)}
                                 </span>
                               </div>
                               <div className="w-full bg-gray-200 rounded-full h-3">
@@ -422,7 +423,7 @@ const MySalary = () => {
                               <div className="flex justify-between items-center mb-1">
                                 <span className="text-sm text-gray-600">Net Salary</span>
                                 <span className="text-sm font-semibold text-blue-600">
-                                  LKR {(salary.netPayableSalary || 0).toLocaleString()}
+                                  {formatCurrency(salary.netPayableSalary || 0)}
                                 </span>
                               </div>
                               <div className="w-full bg-gray-200 rounded-full h-3">
@@ -438,7 +439,7 @@ const MySalary = () => {
                               <div className="flex justify-between text-xs text-gray-500">
                                 <span>Working Days: {salary.attendance?.workingDays || 'N/A'}</span>
                                 <span>OT Hours: {salary.attendance?.overtimeHours || 0}</span>
-                                <span>Deductions: LKR {(salary.deductions?.total || 0).toLocaleString()}</span>
+                                <span>Deductions: {formatCurrency(salary.deductions?.total || 0)}</span>
                               </div>
                             </div>
                           </div>
@@ -453,19 +454,19 @@ const MySalary = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-green-600">
-                          LKR {Math.round(salaries.reduce((sum, s) => sum + (s.grossSalary || 0), 0) / salaries.length).toLocaleString()}
+                          {formatCurrency(Math.round(salaries.reduce((sum, s) => sum + (s.grossSalary || 0), 0) / salaries.length))}
                         </div>
                         <div className="text-sm text-gray-600">Avg Gross</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600">
-                          LKR {Math.round(salaries.reduce((sum, s) => sum + (s.netPayableSalary || 0), 0) / salaries.length).toLocaleString()}
+                          {formatCurrency(Math.round(salaries.reduce((sum, s) => sum + (s.netPayableSalary || 0), 0) / salaries.length))}
                         </div>
                         <div className="text-sm text-gray-600">Avg Net</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-red-600">
-                          LKR {Math.round(salaries.reduce((sum, s) => sum + (s.deductions?.total || 0), 0) / salaries.length).toLocaleString()}
+                          {formatCurrency(Math.round(salaries.reduce((sum, s) => sum + (s.deductions?.total || 0), 0) / salaries.length))}
                         </div>
                         <div className="text-sm text-gray-600">Avg Deductions</div>
                       </div>
@@ -520,7 +521,7 @@ const MySalary = () => {
                         <div key={index} className="space-y-2">
                           <div className="flex justify-between items-center">
                             <span className="text-sm font-medium text-gray-700">{deduction.name}</span>
-                            <span className="text-sm font-bold text-gray-900">LKR {Math.round(deduction.amount).toLocaleString()}</span>
+                            <span className="text-sm font-bold text-gray-900">{formatCurrency(Math.round(deduction.amount))}</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
@@ -536,7 +537,7 @@ const MySalary = () => {
                       <div className="flex justify-between items-center">
                         <span className="font-semibold text-gray-900">Average Total Deductions</span>
                         <span className="font-bold text-red-600">
-                          LKR {Math.round(salaries.reduce((sum, s) => sum + (s.deductions?.total || 0), 0) / salaries.length).toLocaleString()}
+                          {formatCurrency(Math.round(salaries.reduce((sum, s) => sum + (s.deductions?.total || 0), 0) / salaries.length))}
                         </span>
                       </div>
                     </div>
@@ -582,7 +583,7 @@ const MySalary = () => {
                         <div key={index} className="space-y-2">
                           <div className="flex justify-between items-center">
                             <span className="text-sm font-medium text-gray-700">{allowance.name}</span>
-                            <span className="text-sm font-bold text-gray-900">LKR {Math.round(allowance.amount).toLocaleString()}</span>
+                            <span className="text-sm font-bold text-gray-900">{formatCurrency(Math.round(allowance.amount))}</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
@@ -598,7 +599,7 @@ const MySalary = () => {
                       <div className="flex justify-between items-center">
                         <span className="font-semibold text-gray-900">Average Total Allowances</span>
                         <span className="font-bold text-green-600">
-                          LKR {Math.round(salaries.reduce((sum, s) => sum + (s.allowances?.total || 0), 0) / salaries.length).toLocaleString()}
+                          {formatCurrency(Math.round(salaries.reduce((sum, s) => sum + (s.allowances?.total || 0), 0) / salaries.length))}
                         </span>
                       </div>
                     </div>
@@ -654,11 +655,11 @@ const MySalary = () => {
                         <div className="flex items-center gap-6">
                           <div className="text-right">
                             <div className="text-sm text-gray-600">Gross</div>
-                            <div className="font-semibold text-green-600">LKR {(salary.grossSalary || 0).toLocaleString()}</div>
+                            <div className="font-semibold text-green-600">{formatCurrency(salary.grossSalary || 0)}</div>
                           </div>
                           <div className="text-right">
                             <div className="text-sm text-gray-600">Net</div>
-                            <div className="font-bold text-blue-600">LKR {(salary.netPayableSalary || 0).toLocaleString()}</div>
+                            <div className="font-bold text-blue-600">{formatCurrency(salary.netPayableSalary || 0)}</div>
                           </div>
                           <div className="text-right">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(salary.status)}`}>
@@ -737,23 +738,23 @@ const MySalary = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Basic Salary:</span>
-                        <span className="font-medium">LKR {selectedSalary.basicSalary?.toLocaleString()}</span>
+                        <span className="font-medium">{formatCurrency(selectedSalary.basicSalary)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Cost of Living:</span>
-                        <span className="font-medium">LKR {selectedSalary.allowances?.costOfLiving?.toLocaleString()}</span>
+                        <span className="font-medium">{formatCurrency(selectedSalary.allowances?.costOfLiving)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Food Allowance:</span>
-                        <span className="font-medium">LKR {selectedSalary.allowances?.food?.toLocaleString()}</span>
+                        <span className="font-medium">{formatCurrency(selectedSalary.allowances?.food)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Medical Allowance:</span>
-                        <span className="font-medium">LKR {selectedSalary.allowances?.medical?.toLocaleString()}</span>
+                        <span className="font-medium">{formatCurrency(selectedSalary.allowances?.medical)}</span>
                       </div>
                       <div className="flex justify-between font-semibold pt-2 border-t">
                         <span>Gross Salary:</span>
-                        <span>LKR {selectedSalary.grossSalary?.toLocaleString()}</span>
+                        <span>{formatCurrency(selectedSalary.grossSalary)}</span>
                       </div>
                     </div>
                   </div>
@@ -764,19 +765,19 @@ const MySalary = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">EPF Employee:</span>
-                        <span className="font-medium">LKR {selectedSalary.deductions?.epfEmployee?.amount?.toLocaleString()}</span>
+                        <span className="font-medium">{formatCurrency(selectedSalary.deductions?.epfEmployee?.amount)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">APIT:</span>
-                        <span className="font-medium">LKR {selectedSalary.deductions?.apit?.toLocaleString()}</span>
+                        <span className="font-medium">{formatCurrency(selectedSalary.deductions?.apit)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Salary Advance:</span>
-                        <span className="font-medium">LKR {selectedSalary.deductions?.salaryAdvance?.toLocaleString()}</span>
+                        <span className="font-medium">{formatCurrency(selectedSalary.deductions?.salaryAdvance)}</span>
                       </div>
                       <div className="flex justify-between font-semibold pt-2 border-t">
                         <span>Total Deductions:</span>
-                        <span>LKR {selectedSalary.deductions?.total?.toLocaleString()}</span>
+                        <span>{formatCurrency(selectedSalary.deductions?.total)}</span>
                       </div>
                     </div>
                   </div>
@@ -787,7 +788,7 @@ const MySalary = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold text-gray-900">Net Payable Salary:</span>
                     <span className="text-xl font-bold text-green-600">
-                      LKR {selectedSalary.netPayableSalary?.toLocaleString()}
+                      {formatCurrency(selectedSalary.netPayableSalary)}
                     </span>
                   </div>
                   {selectedSalary.amountInWords && (

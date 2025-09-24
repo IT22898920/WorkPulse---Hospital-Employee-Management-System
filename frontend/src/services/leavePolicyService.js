@@ -7,11 +7,16 @@ const leavePolicyService = {
       console.log('🌐 Making API call to get policies...');
       const token = localStorage.getItem('token');
       const user = localStorage.getItem('user');
+      const userRole = user ? JSON.parse(user).role : null;
       console.log('🔑 Token exists:', !!token);
       console.log('👤 User exists:', !!user);
-      console.log('🎯 User role:', user ? JSON.parse(user).role : 'No user');
+      console.log('🎯 User role:', userRole);
 
-      const response = await api.get('/leaves/admin/policies');
+      // Use different endpoints based on user role
+      const endpoint = userRole === 'employee' ? '/leaves/policies' : '/leaves/admin/policies';
+      console.log('📍 Using endpoint:', endpoint);
+
+      const response = await api.get(endpoint);
       console.log('📡 Raw API response:', response.data);
       return {
         success: true,
@@ -21,6 +26,7 @@ const leavePolicyService = {
       console.error('❌ Failed to get leave policies:', error);
       console.error('🔍 Error details:', error.response?.data);
       console.error('🔍 Status:', error.response?.status);
+
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to fetch leave policies'
